@@ -1,0 +1,58 @@
+{
+  "variables": {
+    "aws_access_key": "{{ env `AWS_ACCESS_KEY`}}",
+    "aws_secret_key": "{{ env `AWS_SECRET_KEY`}}",
+    "aws_region": "us-east-1",
+    "aws_subnet_id": <env_subnet>,
+    "aws_security_group": <env_sg>,
+    "instance_type": "t2.micro"
+  },
+  "builders": [
+    {
+      "type":"amazon-ebs", 
+        "region": "{{user `aws_region`}}", 
+        "access_key": "{{user `aws_access_key`}}",
+        "secret_key": "{{user `aws_secret_key`}}", 
+        "subnet_id": "{{user `aws_subnet_id`}}", 
+         "security_group_id": "{{user `aws_security_group`}}", 
+        "source_ami_filter": {
+            "filters": {
+                "virtualization-type": "hvm",
+                "name": "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-20231025",
+                "root-device-type": "ebs"
+            },
+            "owners": ["099720109477"],
+            "most_recent": true
+        },
+        "instance_type": "{{user `instance_type`}}",
+        "ssh_username":"ubuntu", 
+        "ami_name": "minikube-ami_{{timestamp}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "nginx/nginx.yaml",
+      "destination": "/home/ubuntu/"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "sudo apt update",
+        "sudo apt-get install -y ca-certificates curl gnupg",
+        "sudo install -m 0755 -d /etc/apt/keyrings",
+        "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg",
+        "sudo chmod a+r /etc/apt/keyrings/docker.gpg",
+        "echo \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
+        "sudo apt-get update",
+        "sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin",
+        "curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64",
+        "sudo install minikube-linux-amd64 /usr/local/bin/minikube",
+        "sudo usermod -aG docker $USER && newgrp docker",
+        "curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\"",
+        "sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl",
+        "sudo apt-get install -y conntrack"
+      ]
+    }
+  ]
+}
